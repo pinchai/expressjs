@@ -10,8 +10,11 @@ By the end of this lesson, students should be able to:
 - Read query parameters with `req.query`.
 - Read request body data with `req.body`.
 - Read HTTP headers with `req.headers`.
-- Send text responses with `res.send()`.
+- Send text or HTML responses with `res.send()`.
 - Send JSON responses with `res.json()`.
+- Send files with `res.sendFile()`.
+- Download files with `res.download()`.
+- Serve static files and directories with `express.static()`.
 - Set HTTP status codes with `res.status()`.
 - Redirect clients with `res.redirect()`.
 
@@ -453,11 +456,14 @@ Authentication and JWT will be covered later in the course.
 
 The `res` object is used to send a response back to the client.
 
-Common response methods include:
+Common response methods and middleware include:
 
 ```javascript
 res.send()
 res.json()
+res.sendFile()
+res.download()
+express.static()
 res.status()
 res.redirect()
 ```
@@ -564,7 +570,326 @@ Response:
 
 ---
 
-# 17. `res.status()`
+# 21. `res.sendFile()`
+
+`res.sendFile()` sends a file from the server to the client.
+
+It is useful when you want to display or return a specific file such as:
+
+- HTML
+- PDF
+- Image
+- Text file
+- Video
+- Other supported files
+
+Example project structure:
+
+```text
+project/
+├── app.js
+└── files/
+    └── report.pdf
+```
+
+Example:
+
+```javascript
+const path = require("path");
+
+app.get("/report", (req, res) => {
+    const filePath = path.join(__dirname, "files", "report.pdf");
+
+    res.sendFile(filePath);
+});
+```
+
+When the client visits:
+
+```text
+GET /report
+```
+
+Express sends `report.pdf` to the client.
+
+### Why use `path.join()`?
+
+Using Node.js `path.join()` helps create a file path that works correctly across operating systems.
+
+```javascript
+const filePath = path.join(__dirname, "files", "report.pdf");
+```
+
+### Sending an HTML file
+
+Example:
+
+```javascript
+app.get("/home", (req, res) => {
+    const filePath = path.join(__dirname, "public", "index.html");
+
+    res.sendFile(filePath);
+});
+```
+
+---
+
+# 22. `res.download()`
+
+`res.download()` tells the browser to download a file.
+
+Example:
+
+```javascript
+const path = require("path");
+
+app.get("/download-report", (req, res) => {
+    const filePath = path.join(__dirname, "files", "report.pdf");
+
+    res.download(filePath);
+});
+```
+
+When the client visits:
+
+```text
+GET /download-report
+```
+
+the browser will normally download the file instead of displaying it.
+
+### Custom Download Filename
+
+You can provide a different filename for the downloaded file:
+
+```javascript
+app.get("/download-report", (req, res) => {
+    const filePath = path.join(__dirname, "files", "report.pdf");
+
+    res.download(filePath, "student-report.pdf");
+});
+```
+
+The original file is:
+
+```text
+report.pdf
+```
+
+but the downloaded filename will be:
+
+```text
+student-report.pdf
+```
+
+### `res.sendFile()` vs `res.download()`
+
+| Method | Purpose |
+|---|---|
+| `res.sendFile()` | Send a file to the client |
+| `res.download()` | Ask the browser to download a file |
+
+For example:
+
+```javascript
+res.sendFile(filePath);
+```
+
+is useful when the browser can display the file.
+
+```javascript
+res.download(filePath);
+```
+
+is useful when the user should download the file.
+
+---
+
+# 23. `express.static()`
+
+`express.static()` is built-in Express middleware used to serve static files from a directory.
+
+Static files are files that are sent to the client without server-side processing.
+
+Common static files include:
+
+```text
+HTML
+CSS
+JavaScript
+Images
+Fonts
+PDF files
+```
+
+Example project structure:
+
+```text
+project/
+├── app.js
+└── public/
+    ├── index.html
+    ├── css/
+    │   └── style.css
+    ├── js/
+    │   └── app.js
+    └── images/
+        └── logo.png
+```
+
+Configure the `public` directory:
+
+```javascript
+const path = require("path");
+
+app.use(express.static(path.join(__dirname, "public")));
+```
+
+Now a file such as:
+
+```text
+public/index.html
+```
+
+can be requested with:
+
+```text
+GET /index.html
+```
+
+And:
+
+```text
+public/css/style.css
+```
+
+can be requested with:
+
+```text
+GET /css/style.css
+```
+
+### Serving a Directory with a URL Prefix
+
+You can also add a virtual URL prefix:
+
+```javascript
+app.use("/static", express.static(path.join(__dirname, "public")));
+```
+
+Now:
+
+```text
+public/images/logo.png
+```
+
+can be accessed through:
+
+```text
+/static/images/logo.png
+```
+
+The `/static` part is only the URL prefix. It does not need to exist as a physical directory.
+
+### `express.static()` vs `res.sendFile()`
+
+| Feature | `express.static()` | `res.sendFile()` |
+|---|---|---|
+| Purpose | Serve files from a directory | Send one specific file |
+| Common use | CSS, JS, images, HTML | Specific PDF, HTML, image, etc. |
+| Route required | No specific route required | Usually used inside a route |
+| Example | `app.use(express.static("public"))` | `res.sendFile(filePath)` |
+
+### Complete Static File Example
+
+```javascript
+const express = require("express");
+const path = require("path");
+
+const app = express();
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.listen(3000, () => {
+    console.log("Server running on http://localhost:3000");
+});
+```
+
+If the project contains:
+
+```text
+public/
+└── index.html
+```
+
+the browser can request:
+
+```text
+http://localhost:3000/index.html
+```
+
+---
+
+# 24. Response Method Summary
+
+Express provides several ways to send content to a client:
+
+```text
+res.send()
+      ↓
+Send data
+
+res.json()
+      ↓
+Send JSON
+
+res.sendFile()
+      ↓
+Send a specific file
+
+res.download()
+      ↓
+Download a file
+
+express.static()
+      ↓
+Serve files from a directory
+```
+
+Example:
+
+```javascript
+app.get("/text", (req, res) => {
+    res.send("Hello Express.js");
+});
+
+app.get("/api/product", (req, res) => {
+    res.json({
+        id: 1,
+        name: "Laptop"
+    });
+});
+
+app.get("/report", (req, res) => {
+    res.sendFile(path.join(__dirname, "files", "report.pdf"));
+});
+
+app.get("/download", (req, res) => {
+    res.download(
+        path.join(__dirname, "files", "report.pdf")
+    );
+});
+```
+
+For a directory:
+
+```javascript
+app.use(express.static(path.join(__dirname, "public")));
+```
+
+---
+
+# 25. `res.status()`
 
 `res.status()` sets the HTTP status code.
 
@@ -586,7 +911,7 @@ The response status is:
 
 ---
 
-# 18. Common Status Codes
+# 22. Common Status Codes
 
 Some common HTTP status codes are:
 
@@ -606,7 +931,7 @@ We will study HTTP errors in more detail in the Error Handling lesson.
 
 ---
 
-# 19. Combining `res.status()` and `res.json()`
+# 23. Combining `res.status()` and `res.json()`
 
 These methods can be chained:
 
@@ -634,7 +959,7 @@ with JSON:
 
 ---
 
-# 20. `res.redirect()`
+# 24. `res.redirect()`
 
 `res.redirect()` redirects the client to another URL.
 
@@ -664,7 +989,7 @@ Express redirects the client to:
 
 ---
 
-# 21. Redirect with a Status Code
+# 25. Redirect with a Status Code
 
 You can specify a redirect status:
 
@@ -682,7 +1007,7 @@ res.redirect(302, "/login");
 
 ---
 
-# 22. Complete Request & Response Example
+# 26. Complete Request & Response Example
 
 The following example combines several concepts:
 
@@ -727,7 +1052,7 @@ app.listen(3000, () => {
 
 ---
 
-# 23. Understanding the Complete Request
+# 27. Understanding the Complete Request
 
 Consider:
 
@@ -765,7 +1090,7 @@ res.status(200).json({
 
 ---
 
-# 24. Request Data Summary
+# 28. Request Data Summary
 
 | Request Data | Express Property | Example |
 |---|---|---|
@@ -776,18 +1101,21 @@ res.status(200).json({
 
 ---
 
-# 25. Response Method Summary
+# 29. Response Method Summary
 
-| Method | Purpose |
+| Method / Middleware | Purpose |
 |---|---|
 | `res.send()` | Send a response |
 | `res.json()` | Send JSON |
+| `res.sendFile()` | Send a specific file |
+| `res.download()` | Download a file |
+| `express.static()` | Serve files from a directory |
 | `res.status()` | Set HTTP status |
 | `res.redirect()` | Redirect client |
 
 ---
 
-# 26. Practice Exercise
+# 30. Practice Exercise
 
 ## Exercise 1 — Route Parameter
 
@@ -904,7 +1232,87 @@ Read the `User-Agent` header and return it as JSON.
 
 ---
 
-# 27. Lab Practice — Product API
+# 30. Practice Exercise — Files and Static Content
+
+## Exercise 6 — Send a File
+
+Create:
+
+```text
+GET /report
+```
+
+Requirements:
+
+1. Create a `files` directory.
+2. Put a PDF file inside it.
+3. Use `res.sendFile()` to send the PDF.
+4. Use `path.join()` to create the file path.
+
+---
+
+## Exercise 7 — Download a File
+
+Create:
+
+```text
+GET /download-report
+```
+
+Requirements:
+
+1. Use `res.download()`.
+2. Download a PDF from the `files` directory.
+3. Set a custom download filename.
+
+---
+
+## Exercise 8 — Static Directory
+
+Create this structure:
+
+```text
+public/
+├── index.html
+├── css/
+│   └── style.css
+└── images/
+    └── logo.png
+```
+
+Configure:
+
+```javascript
+app.use(express.static("public"));
+```
+
+Then test:
+
+```text
+/index.html
+/css/style.css
+/images/logo.png
+```
+
+---
+
+## Exercise 9 — Static Directory with Prefix
+
+Configure the `public` directory using:
+
+```javascript
+app.use("/static", express.static("public"));
+```
+
+Then determine the URL for:
+
+```text
+public/images/logo.png
+```
+
+---
+
+# 31. Lab Practice — Product API
 
 Build a Product API with:
 
@@ -981,7 +1389,7 @@ and return a JSON response confirming the deletion.
 
 ---
 
-# 28. Review Questions
+# 32. Review Questions
 
 1. What is the purpose of the `req` object?
 2. What is the purpose of the `res` object?
@@ -1001,10 +1409,24 @@ and return a JSON response confirming the deletion.
 16. How do you read a product ID from `/products/:id`?
 17. How do you read `category` from `/products?category=phone`?
 18. How do you read a JSON product sent in a POST request?
+19. What does `res.sendFile()` do?
+20. What is the difference between `res.sendFile()` and `res.download()`?
+21. What does `res.download()` do?
+22. What is `express.static()` used for?
+23. What is the difference between `express.static()` and `res.sendFile()`?
+24. How do you serve a `public` directory using `express.static()`?
+25. How can you add a URL prefix when using `express.static()`?
+19. What does `res.sendFile()` do?
+20. What is the difference between `res.sendFile()` and `res.download()`?
+21. What does `res.download()` do?
+22. What is `express.static()` used for?
+23. What is the difference between `express.static()` and `res.sendFile()`?
+24. How do you serve a `public` directory using `express.static()`?
+25. How can you add a URL prefix when using `express.static()`?
 
 ---
 
-# 29. Key Points
+# 33. Key Points
 
 Remember:
 
